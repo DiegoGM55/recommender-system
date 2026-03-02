@@ -1,0 +1,325 @@
+================================================================================
+  GUIA DE ESTUDO — NOTEBOOKS DO PROJETO RECOMMENDER-SYSTEM (TCC)
+================================================================================
+
+Este arquivo descreve o que cada notebook na pasta "notebooks" faz e quais
+assuntos e bibliotecas você precisa dominar para entendê-los por completo.
+
+O projeto usa o dataset Online Retail (vendas de varejo) para construir um
+sistema de recomendação. O fluxo é: limpeza/EDA → baselines → fatoração de
+matrizes (ALS) → filtragem por conteúdo → modelo híbrido (blend).
+
+================================================================================
+  1. 00_Data_Cleaning_EDA.ipynb
+================================================================================
+
+O QUE FAZ:
+---------
+• Análise exploratória inicial do dataset Online Retail (Excel).
+• Carrega o arquivo, mostra primeiras linhas, info(), valores nulos e
+  estatísticas descritivas das variáveis numéricas.
+• Analisa quantidades negativas (devoluções).
+• Plota distribuição de transações por cliente e por produto (histogramas).
+• Explora top produtos e top usuários.
+
+É uma EDA mais enxuta, focada em entender a estrutura dos dados e
+distribuições básicas antes da limpeza e modelagem.
+
+ASSUNTOS PARA DOMINAR:
+----------------------
+• Análise exploratória de dados (EDA).
+• Leitura de dados tabulares (Excel).
+• Estatísticas descritivas e tratamento de missing values.
+• Visualização de distribuições (histogramas).
+• Noções de dados de transação (faturas, itens, clientes).
+
+BIBLIOTECAS:
+------------
+• pandas — leitura de Excel (read_excel), DataFrames, info(), describe(),
+  isnull(), groupby, value_counts.
+• matplotlib — histogramas (hist), rótulos, títulos.
+
+================================================================================
+  2. 01_Data_Cleaning_EDA.ipynb
+================================================================================
+
+O QUE FAZ:
+---------
+• EDA mais completa, preparatória para a modelagem.
+• Carregamento e visão geral do Online Retail.
+• Limpeza e padronização dos dados.
+• Tabela ANTES vs DEPOIS da limpeza.
+• Análise da cauda longa (long tail) e esparsidade da matriz usuário–item.
+• Análise temporal e split temporal treino/validação (evita data leakage).
+• Análise do texto em "Description": qualidade e TF-IDF com termos genéricos
+  filtrados (base para filtragem por conteúdo).
+• Heatmap weekday × hour (sinal contextual).
+• Salvamento de artefatos para os próximos notebooks (ex.: dataset limpo).
+
+Este notebook deixa o dataset pronto para CF (collaborative filtering),
+conteúdo e blending.
+
+ASSUNTOS PARA DOMINAR:
+----------------------
+• Tudo do 00_Data_Cleaning_EDA, em maior profundidade.
+• Long tail e esparsidade em sistemas de recomendação.
+• Split temporal (treino/validação) e prevenção de data leakage.
+• Cold-start (usuários/itens com poucas interações).
+• Representação de texto: TF-IDF, stop words, n-grams.
+• Visualização: heatmaps (eixos tempo, e.g. dia da semana × hora).
+• Fluxo de dados: raw → cleaned → processed.
+
+BIBLIOTECAS:
+------------
+• pandas — manipulação avançada, tipos de dados, merge, groupby.
+• numpy — arrays, operações numéricas.
+• matplotlib e seaborn — gráficos, heatmaps.
+• sklearn.feature_extraction.text.TfidfVectorizer — TF-IDF em descrições.
+
+================================================================================
+  3. 02_Baselines_Pop_Knn.ipynb
+================================================================================
+
+O QUE FAZ:
+---------
+• Implementa dois baselines: Popularidade e KNN item–item.
+• Usa o módulo "src" (data_processing, evaluation) para split, mapeamentos e
+  métricas.
+• Remove cold users e cold items (< 5 interações) do treino.
+• Popularidade: para cada item, calcula unique_users e num_transactions;
+  aplica MinMaxScaler e combina com peso (alpha) em um "pop_score". Recomenda
+  os top itens por esse score para todos os usuários.
+• KNN item–item: monta matriz item–usuário (ou usuário–item), calcula
+  similaridade de cosseno entre itens, e para cada usuário recomenda os
+  itens mais similares aos que ele já comprou (excluindo vistos).
+• Avalia ambos com Precision@K, Recall@K e NDCG@K (K = 5, 10, 20) via
+  evaluate_recommender.
+• Compara KNN vs Popularidade e exporta resultados (df_knn.parquet,
+  df_pop.parquet) para uso posterior.
+
+ASSUNTOS PARA DOMINAR:
+----------------------
+• Baselines em recomendação: popularidade e KNN colaborativo.
+• Matriz usuário–item e matriz item–usuário (orientação e esparsidade).
+• Similaridade de cosseno e vizinhos mais próximos (item–item).
+• Normalização (MinMaxScaler) e combinação ponderada de features.
+• Métricas de ranking: Precision@K, Recall@K, NDCG@K.
+• Tratamento de cold users/items e exclusão de itens já vistos.
+• Uso de módulos internos (data_processing, evaluation).
+
+BIBLIOTECAS:
+------------
+• pandas — agregações, groupby, merge.
+• sklearn.preprocessing.MinMaxScaler — normalização.
+• sklearn.metrics.pairwise.cosine_similarity — similaridade entre itens.
+• sklearn.preprocessing.normalize — se usado em vetores.
+• scipy.sparse.csr_matrix — matriz esparsa (se usada no KNN).
+• mlxtend.frequent_patterns (apriori, association_rules) — importados; verificar
+  se utilizados em alguma parte do notebook.
+• collections.defaultdict — estruturas auxiliares.
+• numpy — operações numéricas.
+• matplotlib, seaborn — visualização de resultados.
+
+================================================================================
+  4. 03_Matrix_Factorization_als.ipynb
+================================================================================
+
+O QUE FAZ:
+---------
+• Implementa e avalia o modelo ALS (Alternating Least Squares) de fatoração
+  de matrizes.
+• Carrega dados preparados (online_retail_clean.parquet), faz split
+  treino/validação e cria mapeamentos (user_map, item_map, etc.).
+• Constrói matriz esparsa usuário–item de contagens (ou confiança) e treina
+  ALS com a biblioteca implicit.
+• Gera recomendações por usuário (exemplo) e implementa recommend_als_items
+  compatível com evaluate_recommender.
+• Avalia em vários K (5, 10, 20) e compara ALS vs KNN usando as funções de
+  comparação do "src".
+
+ASSUNTOS PARA DOMINAR:
+----------------------
+• Fatoração de matrizes em recomendação (MF).
+• ALS: ideia de fatores latentes, atualização alternada, regularização.
+• Matrizes esparsas (CSR) e índices para usuários/itens.
+• Treino/validação e mapeamentos ID ↔ índice.
+• Métricas P@K, R@K, NDCG@K e comparação entre modelos.
+
+BIBLIOTECAS:
+------------
+• numpy — arrays e operações.
+• pandas — leitura, groupby, preparação.
+• scipy.sparse.csr_matrix — matriz esparsa usuário–item.
+• implicit — ALS (implicit.als.AlternatingLeastSquares), recommend().
+
+================================================================================
+  5. 03_Matrix_Factorization_tuning.ipynb
+================================================================================
+
+O QUE FAZ:
+---------
+• Faz tuning de hiperparâmetros do ALS.
+• Reutiliza pipeline do 03_Matrix_Factorization_als, mas com funções
+  encapsuladas em "als_utils": build_interaction_matrix, apply_bm25_or_tfidf,
+  train_als, recommend_user.
+• Remove cold users/items (< 5 interações).
+• Permite weighting por contagem, log ou (opcional) BM25/TF-IDF na matriz
+  de interações.
+• Executa grid search (ou busca similar) sobre factors, regularization,
+  iterations, etc.
+• Salva o melhor modelo (ex.: best_als_model.joblib) e mapeamentos
+  (als_mappings.joblib) para uso no híbrido.
+• Usa gráficos (matplotlib) para analisar resultados do tuning.
+
+ASSUNTOS PARA DOMINAR:
+----------------------
+• Tudo do 03_Matrix_Factorization_als.
+• Tuning de hiperparâmetros: grid search, métricas de validação.
+• Weighting de confiança: contagem, log, BM25, TF-IDF (em matriz de
+  interação).
+• Persistência de modelos (joblib) e de mapeamentos.
+• Organização de código em módulos (als_utils).
+
+BIBLIOTECAS:
+------------
+• numpy, pandas, scipy.sparse — como no 03_ALS.
+• implicit — ALS, bm25_weight, tfidf_weight (se usados).
+• joblib — save/load de modelos e mapeamentos.
+• matplotlib — visualização do tuning.
+• copy.deepcopy, itertools — se usados em loops de busca.
+• als_utils (projeto), data_processing, evaluation.
+
+================================================================================
+  6. 04_Content_Based_filtering.ipynb
+================================================================================
+
+O QUE FAZ:
+---------
+• Implementa filtragem por conteúdo usando as descrições dos itens.
+• Agrupa descrições por StockCode, faz merge de palavras únicas por item e
+  gera catálogo (ex.: catalogo_unico.parquet).
+• Aplica TfidfVectorizer nas descrições e calcula matriz de similaridade de
+  cosseno entre itens (cosine_similarity).
+• Implementa get_similar_items_by_stockcode para consultar itens similares a
+  um dado StockCode.
+• Define split 5-core (usuários e itens com ≥ 5 interações) e
+  create_content_recommender_fn: closure que, dado histórico do usuário,
+  agrega scores de similaridade (ex.: soma) sobre itens do catálogo, aplica
+  penalidade/filtro para itens já vistos e retorna top-K.
+• Avalia com evaluate_recommender (P@K, R@K, NDCG@K).
+• Salva matriz de similaridade (ex.: cosine_sim.joblib) para o híbrido.
+
+ASSUNTOS PARA DOMINAR:
+----------------------
+• Filtragem por conteúdo (content-based filtering).
+• TF-IDF e similaridade de cosseno em textos.
+• Agregação de scores a partir do histórico do usuário (soma, média, etc.).
+• Exclusão de itens já vistos e noção de “novidade”.
+• Split core (5-core) e dicionários de treino/validação para avaliação.
+• Closures e assinatura recommend_fn(user_id, K, exclude) usada pelo
+  avaliador.
+• Mapeamentos item ↔ índice no espaço de conteúdo.
+
+BIBLIOTECAS:
+------------
+• sklearn.feature_extraction.text.TfidfVectorizer — TF-IDF em descrições.
+• sklearn.metrics.pairwise.cosine_similarity — similaridade entre itens.
+• sklearn.preprocessing.normalize — se usado.
+• pandas, numpy — catálogo, agregações, índices.
+• typing — List, Dict, Set para tipo de recommend_fn.
+• joblib — salvar cosine_sim.
+• data_processing, evaluation (projeto).
+
+================================================================================
+  7. 05_Hybrid_Blending.ipynb
+================================================================================
+
+O QUE FAZ:
+---------
+• Combina o modelo ALS (após tuning) com o modelo de conteúdo em um híbrido
+  por blending.
+• Carrega best_als_model.joblib, cosine_sim.joblib e als_mappings.joblib.
+• Garante consistência de dimensões e cria “ponte” de alinhamento entre
+  índices do ALS e índices do espaço de conteúdo (translation_array).
+• Para cada usuário de avaliação, pré-computa:
+  – scores ALS (user_factors @ item_factors.T);
+  – scores de conteúdo alinhados ao espaço de itens do ALS (via translation_array).
+• Define rec_fn_hybrid_dynamic(alpha): mistura
+  alpha * ALS_norm + (1 - alpha) * Content.
+  ALS é normalizado com MinMax por usuário (essencial para o blend).
+• Faz grid search em alpha (ex.: 0.0, 0.2, …, 1.0), avalia com NDCG@10
+  (e P@10, R@10) e escolhe o melhor alpha.
+• Plota curva alpha vs NDCG@10 (matplotlib/seaborn), destacando ALS puro e
+  melhor híbrido.
+
+ASSUNTOS PARA DOMINAR:
+----------------------
+• Sistemas híbridos de recomendação (blending, weighted combination).
+• Normalização de scores (MinMax por usuário) antes de combinar.
+• Alinhamento de espaços (itens ALS vs itens conteúdo) e “ponte” de índices.
+• Uso de fatores latentes (user_factors, item_factors) para gerar scores.
+• Grid search em hiperparâmetro de blend (alpha).
+• Avaliação com NDCG@K e comparação com baseline (ALS puro).
+
+BIBLIOTECAS:
+------------
+• joblib — carregar modelo ALS, cosine_sim, mapeamentos.
+• pandas, numpy — dados, grids, resultados.
+• sklearn.preprocessing.MinMaxScaler — referência; no notebook a
+  normalização é feita manualmente por usuário.
+• matplotlib, seaborn — gráficos alpha vs NDCG@10.
+• data_processing, evaluation (projeto).
+
+================================================================================
+  MÓDULOS DO PROJETO (src) — VISÃO GERAL
+================================================================================
+
+• data_processing: load_and_prepare_data, split_train_validation,
+  create_mappings. Usados em quase todos os notebooks.
+• evaluation: evaluate_recommender (P@K, R@K, NDCG@K), get_results_df,
+  compare_models. Usados a partir dos baselines.
+• als_utils: build_interaction_matrix, apply_bm25_or_tfidf, train_als,
+  recommend_user. Usados no tuning do ALS e indiretamente no híbrido.
+
+Dominar esses módulos ajuda a acompanhar o fluxo de dados e a avaliação em
+todos os notebooks.
+
+================================================================================
+  ORDEM SUGERIDA DE ESTUDO
+================================================================================
+
+1. 00_Data_Cleaning_EDA — base de EDA e pandas.
+2. 01_Data_Cleaning_EDA — aprofundar EDA, split temporal, TF-IDF.
+3. Ler src/data_processing.py e src/evaluation.py.
+4. 02_Baselines_Pop_Knn — baselines e métricas.
+5. 03_Matrix_Factorization_als — ALS e implicit.
+6. 03_Matrix_Factorization_tuning — als_utils e tuning.
+7. 04_Content_Based_filtering — conteúdo e closures.
+8. 05_Hybrid_Blending — híbrido e blending.
+
+================================================================================
+  BIBLIOTECAS E ASSUNTOS GERAIS (RESUMO)
+================================================================================
+
+BIBLIOTECAS:
+  • pandas, numpy — base em todos os notebooks.
+  • matplotlib, seaborn — visualização.
+  • scipy.sparse (csr_matrix) — matrizes esparsas.
+  • sklearn: MinMaxScaler, TfidfVectorizer, cosine_similarity, normalize.
+  • implicit — ALS, BM25/TF-IDF em matriz de interação.
+  • joblib — salvar/carregar modelos e artefatos.
+  • typing — dicas de tipo em closures.
+
+ASSUNTOS:
+  • EDA, limpeza, split temporal, data leakage.
+  • Long tail, esparsidade, cold-start.
+  • Baselines: popularidade, KNN item–item.
+  • Fatoração de matrizes (ALS), matrizes esparsas.
+  • Filtragem por conteúdo (TF-IDF, similaridade de cosseno).
+  • Híbridos (blending) e normalização de scores.
+  • Métricas: Precision@K, Recall@K, NDCG@K.
+  • Pipeline: dados → baselines → MF → conteúdo → híbrido.
+
+================================================================================
+  FIM DO GUIA
+================================================================================

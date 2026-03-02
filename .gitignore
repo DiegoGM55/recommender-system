@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Tool caches
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Local app secrets
+.streamlit/secrets.toml
+
+# Project data artifacts
+data/*.parquet
+data/raw/*.xlsx
+data/raw/*.parquet
+data/raw/*.joblib
+data/processed/*
+!data/processed/.gitkeep
+
+# Study datasets
+estudos/machine_learning/data/*.csv
+estudos/machine_learning/data/*.parquet
+
+# Trained models
+models/*.joblib
+
+# Generated results
+results/figures/*.png
+results/metrics/*
+!results/metrics/.gitkeep
